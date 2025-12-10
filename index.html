@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incremental Reaction: Combo Edition</title>
+    <style>
+        :root {
+            --bg: #0b0c15;
+            --panel: #161b22;
+            --accent: #00f260;
+            --combo: #ff0055;
+            --text: #e6e6e6;
+            --btn-bg: #21262d;
+            --btn-border: #30363d;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg);
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--text);
+            user-select: none;
+        }
+
+        /* HUD - Top Left */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(0, 242, 96, 0.4);
+            letter-spacing: 2px;
+        }
+
+        .stat-row {
+            font-size: 18px;
+            margin-top: 5px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        #credits { color: #f2c94c; font-weight: bold; }
+
+        /* COMBO HUD - Top Center */
+        #combo-hud {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        #combo-count {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--combo);
+            text-shadow: 0 0 20px var(--combo);
+            display: block;
+        }
+
+        #combo-label {
+            font-size: 16px;
+            color: #fff;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        /* UPGRADE PANEL - Bottom */
+        #upgrade-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: var(--panel);
+            border-top: 2px solid var(--btn-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 10px;
+            box-sizing: border-box;
+            z-index: 20;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            overflow-x: auto; /* Scroll if screen is too narrow */
+        }
+
+        .upgrade-card {
+            background: var(--btn-bg);
+            border: 1px solid var(--btn-border);
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 110px;
+            width: 120px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .upgrade-card:hover { background: #30363d; transform: translateY(-2px); }
+        .upgrade-card:active { transform: translateY(1px); }
+        
+        .upgrade-card.disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+            background: #111;
+        }
+
+        .u-title { font-size: 11px; color: #8b949e; text-transform: uppercase; font-weight: bold; }
+        .u-val { font-size: 18px; font-weight: bold; color: white; margin: 5px 0; }
+        .u-cost { font-size: 11px; color: #f2c94c; }
+
+        /* Spawn Button */
+        #spawn-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            min-width: 110px;
+            height: 110px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 242, 96, 0.2);
+            transition: all 0.1s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #spawn-btn:hover { background: #26ff80; transform: scale(1.05); }
+        #spawn-btn:active { transform: scale(0.95); }
+
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        <h1>REACTION.IO</h1>
+        <div class="stat-row">CREDITS: <span id="credits">0</span></div>
+        <div class="stat-row">POPULATION: <span id="pop-count">0</span> / <span id="pop-cap">30</span></div>
+    </div>
+
+    <div id="combo-hud">
+        <span id="combo-count">x1</span>
+        <span id="combo-label">FRENZY!</span>
+    </div>
+
+    <div id="upgrade-panel">
+        <button id="spawn-btn" onclick="spawnBatch()">
+            <span>INJECT</span>
+        </button>
+
+        <div class="upgrade-card" id="btn-inject" onclick="buyUpgrade('inject')">
+            <div class="u-title">Batch Size</div>
+            <div class="u-val" id="val-inject">5</div>
+            <div class="u-cost" id="cost-inject">400 CR</div>
+        </div>
+
+        <div class="upgrade-card" id="btn-shrapnel" onclick="buyUpgrade('shrapnel')">
+            <div class="u-title">Triangles</div>
+            <div class="u-val" id="val-shrapnel">3</div>
+            <div class="u-cost" id="cost-shrapnel">50 CR</div>
+        </div>
+
+        <div class="upgrade-card" id="btn-range" onclick="buyUpgrade('range')">
+            <div class="u-title">Triangle Life</div>
+            <div class="u-val" id="val-range">1.0s</div>
+            <div class="u-cost" id="cost-range">100 CR</div>
+        </div>
+
+        <div class="upgrade-card" id="btn-cap" onclick="buyUpgrade('cap')">
+            <div class="u-title">Max Circles</div>
+            <div class="u-val" id="val-cap">30</div>
+            <div class="u-cost" id="cost-cap">200 CR</div>
+        </div>
+
+        <div class="upgrade-card" id="btn-auto" onclick="buyUpgrade('auto')">
+            <div class="u-title">Auto Spawn</div>
+            <div class="u-val" id="val-auto">2.0s</div>
+            <div class="u-cost" id="cost-auto">300 CR</div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+
+        // --- GAME STATE ---
+        let credits = 0;
+        let circles = [];
+        let particles = [];
+        let texts = [];
+        let lastAutoSpawn = 0;
+        
+        // Combo State
+        let combo = 0;
+        let comboTimer = 0;
+        const COMBO_DECAY_FRAMES = 90; // How long combo lasts before resetting
+
+        // --- UPGRADES STATE ---
+        const upgrades = {
+            inject: { val: 5, cost: 400, costMult: 1.6, name: "Batch Size" },
+            shrapnel: { val: 4, cost: 50, costMult: 1.8, name: "Triangles" },
+            range: { val: 60, cost: 100, costMult: 1.5, name: "Duration" }, // Frames
+            cap: { val: 30, cost: 150, costMult: 1.4, name: "Capacity" },
+            auto: { val: 2000, cost: 300, costMult: 1.6, name: "Rate (ms)" } // ms
+        };
+
+        // --- CLASSES ---
+
+        class FloatingText {
+            constructor(x, y, text, size=20, color='#fff') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.size = size;
+                this.life = 50;
+                this.dy = -1.5;
+            }
+            update() {
+                this.y += this.dy;
+                this.life--;
+            }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life / 50);
+                ctx.font = `bold ${this.size}px monospace`;
+                ctx.fillStyle = this.color;
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        class Circle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = Math.random() * 15 + 10;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                const hue = Math.random() * 60 + 160; 
+                this.color = `hsl(${hue}, 70%, 50%)`;
+                this.markedForDeletion = false;
+                this.scale = 0; 
+            }
+
+            update() {
+                if(this.scale < 1) this.scale += 0.1;
+                if (this.x + this.radius > width || this.x - this.radius < 0) this.vx *= -1;
+                if (this.y + this.radius > height || this.y - this.radius < 0) this.vy *= -1;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.x = Math.max(this.radius, Math.min(width - this.radius, this.x));
+                this.y = Math.max(this.radius, Math.min(height - this.radius, this.y));
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = 6;
+                this.vx = Math.cos(this.angle) * this.speed;
+                this.vy = Math.sin(this.angle) * this.speed;
+                this.life = upgrades.range.val; 
+                this.maxLife = upgrades.range.val;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+                if (this.life <= 0) this.markedForDeletion = true;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(Math.atan2(this.vy, this.vx));
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(-6, 5);
+                ctx.lineTo(-6, -5);
+                ctx.fillStyle = '#f2c94c';
+                ctx.fill();
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // --- CORE LOGIC ---
+
+        function init() {
+            resize();
+            window.addEventListener('resize', resize);
+            canvas.addEventListener('mousedown', handleInput);
+            updateUI();
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function spawnCircle() {
+            if (circles.length >= upgrades.cap.val) return;
+            const x = Math.random() * (width - 60) + 30;
+            const y = Math.random() * (height - 200) + 30;
+            circles.push(new Circle(x, y));
+        }
+
+        function spawnBatch() {
+            let count = 0;
+            // Use the upgrade value for batch size
+            const batchSize = upgrades.inject.val; 
+            
+            while(circles.length < upgrades.cap.val && count < batchSize) {
+                spawnCircle();
+                count++;
+            }
+            
+            const btn = document.getElementById('spawn-btn');
+            if(circles.length >= upgrades.cap.val) {
+                btn.style.background = "#ff4757";
+                setTimeout(() => { btn.style.background = "#00f260"; }, 200);
+            }
+        }
+
+        function explode(circle) {
+            circle.markedForDeletion = true;
+            
+            // --- COMBO LOGIC ---
+            combo++;
+            comboTimer = COMBO_DECAY_FRAMES; // Reset decay timer
+            updateComboUI();
+
+            // Calculate Score: Base 10 * Combo Multiplier
+            // Multiplier grows slower than linear to prevent infinite economy instantly, but still strong
+            // Formula: 1 + (Combo * 0.5)
+            let multiplier = 1 + (combo * 0.5);
+            let amount = Math.floor(10 * multiplier);
+            
+            addCredits(amount);
+
+            // Text style depends on combo size
+            let textSize = 16;
+            let textColor = '#f2c94c';
+            if(combo > 10) { textSize = 24; textColor = '#ff0055'; }
+            else if(combo > 5) { textSize = 20; textColor = '#ff9f43'; }
+
+            texts.push(new FloatingText(circle.x, circle.y, `+${amount}`, textSize, textColor));
+
+            // Create Shrapnel
+            const count = Math.floor(upgrades.shrapnel.val);
+            for(let i=0; i<count; i++) {
+                particles.push(new Particle(circle.x, circle.y));
+            }
+
+            // Screen Shake (Intensity based on Combo)
+            const shake = Math.min(8, 2 + (combo/5));
+            ctx.translate(Math.random()*shake - (shake/2), Math.random()*shake - (shake/2));
+            setTimeout(() => ctx.setTransform(1,0,0,1,0,0), 50);
+        }
+
+        function updateComboUI() {
+            const hud = document.getElementById('combo-hud');
+            const count = document.getElementById('combo-count');
+            
+            if(combo > 1) {
+                hud.style.opacity = 1;
+                hud.style.transform = `translateX(-50%) scale(${1 + (combo/50)})`;
+                count.innerText = "x" + combo;
+            } else {
+                hud.style.opacity = 0;
+                hud.style.transform = `translateX(-50%) scale(1)`;
+            }
+        }
+
+        function addCredits(amount) {
+            credits += amount;
+            updateUI();
+        }
+
+        function handleInput(e) {
+            if(e.clientY > height - 150) return; // Ignore clicks on panel
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            circles.forEach(c => {
+                const dist = Math.hypot(x - c.x, y - c.y);
+                if(dist < c.radius) {
+                    explode(c);
+                }
+            });
+        }
+
+        function buyUpgrade(type) {
+            const up = upgrades[type];
+            if(credits >= up.cost) {
+                credits -= up.cost;
+                
+                if(type === 'inject') up.val += 1;
+                if(type === 'shrapnel') up.val += 1;
+                if(type === 'range') up.val += 20;
+                if(type === 'cap') up.val += 10;
+                if(type === 'auto') up.val = Math.max(100, up.val * 0.9);
+
+                up.cost = Math.floor(up.cost * up.costMult);
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('credits').innerText = credits.toLocaleString();
+            document.getElementById('pop-count').innerText = circles.length;
+            document.getElementById('pop-cap').innerText = upgrades.cap.val;
+
+            updateCard('inject', "+" + upgrades.inject.val);
+            updateCard('shrapnel', upgrades.shrapnel.val.toFixed(0));
+            updateCard('range', (upgrades.range.val/60).toFixed(1) + 's');
+            updateCard('cap', upgrades.cap.val);
+            updateCard('auto', (upgrades.auto.val/1000).toFixed(1) + 's');
+        }
+
+        function updateCard(id, displayVal) {
+            const up = upgrades[id];
+            document.getElementById(`val-${id}`).innerText = displayVal;
+            document.getElementById(`cost-${id}`).innerText = up.cost.toLocaleString() + " CR";
+            
+            const el = document.getElementById(`btn-${id}`);
+            if(credits < up.cost) el.classList.add('disabled');
+            else el.classList.remove('disabled');
+        }
+
+        function loop(timestamp) {
+            ctx.fillStyle = 'rgba(11, 12, 21, 0.4)'; 
+            ctx.fillRect(0, 0, width, height);
+
+            // Combo Decay logic
+            if(combo > 0) {
+                comboTimer--;
+                if(comboTimer <= 0) {
+                    combo = 0; // Reset combo if time runs out
+                    updateComboUI();
+                }
+            }
+
+            if (timestamp - lastAutoSpawn > upgrades.auto.val) {
+                spawnCircle();
+                lastAutoSpawn = timestamp;
+                updateUI(); 
+            }
+
+            circles = circles.filter(c => !c.markedForDeletion);
+            circles.forEach(c => { c.update(); c.draw(); });
+
+            particles = particles.filter(p => !p.markedForDeletion);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+                
+                circles.forEach(c => {
+                    if(!c.markedForDeletion) {
+                        const dx = p.x - c.x;
+                        const dy = p.y - c.y;
+                        if(Math.hypot(dx, dy) < c.radius + 5) {
+                            p.markedForDeletion = true;
+                            explode(c);
+                        }
+                    }
+                });
+            });
+
+            texts = texts.filter(t => t.life > 0);
+            texts.forEach(t => { t.update(); t.draw(); });
+
+            updateUI();
+            requestAnimationFrame(loop);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
