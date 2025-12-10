@@ -3,212 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Incremental Reaction: Stabilized</title>
+    <title>Reaction: Cyberpunk Edition</title>
     <style>
         :root {
-            --bg: #0b0c15;
-            --panel: #161b22;
-            --accent: #00f260;
-            --combo: #ff0055;
-            --text: #e6e6e6;
-            --btn-bg: #21262d;
-            --btn-border: #30363d;
+            --bg: #050505;
+            --glass: rgba(20, 20, 30, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #00f3ff; /* Cyan */
+            --accent-glow: rgba(0, 243, 255, 0.4);
+            --danger: #ff0055; /* Pink/Red */
+            --gold: #ffd700;
+            --text-main: #ffffff;
+            --text-dim: #8899a6;
+            --font-stack: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
             margin: 0;
             overflow: hidden;
             background-color: var(--bg);
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--text);
+            font-family: var(--font-stack);
+            color: var(--text-main);
             user-select: none;
-            -webkit-user-select: none; /* Safari */
-            touch-action: manipulation; /* Disables double-tap to zoom */
+            -webkit-user-select: none;
+            touch-action: none; /* Critical for mobile game feel */
         }
 
-        /* HUD - Top Left */
+        /* --- BACKGROUND GRID --- */
+        #grid {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.15;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes gridMove {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(50px) translateZ(-200px); }
+        }
+
+        /* --- HUD --- */
         #hud {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             pointer-events: none;
             z-index: 10;
         }
 
-        h1 {
-            margin: 0;
-            font-size: 24px;
-            color: var(--accent);
-            text-shadow: 0 0 10px rgba(0, 242, 96, 0.4);
+        .hud-panel {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .currency-label {
+            font-size: 12px;
+            text-transform: uppercase;
             letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
         }
 
-        .stat-row {
-            font-size: 18px;
-            margin-top: 5px;
-            background: rgba(0,0,0,0.6);
-            padding: 5px 10px;
-            border-radius: 4px;
-            display: inline-block;
+        #credits {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent);
+            text-shadow: 0 0 15px var(--accent-glow);
+            font-variant-numeric: tabular-nums;
         }
 
-        #credits { color: #f2c94c; font-weight: bold; }
-
-        /* COMBO HUD - Top Center */
-        #combo-hud {
+        /* --- COMBO DISPLAY --- */
+        #combo-container {
             position: absolute;
-            top: 20px;
+            top: 20%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             text-align: center;
             pointer-events: none;
+            z-index: 5;
             opacity: 0;
-            transition: opacity 0.2s, transform 0.1s;
-            will-change: transform; /* Performance optimization */
+            transition: opacity 0.2s, transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        #combo-count {
-            font-size: 48px;
+        #combo-val {
+            font-size: 60px;
             font-weight: 900;
-            color: var(--combo);
-            text-shadow: 0 0 20px var(--combo);
-            display: block;
+            color: var(--danger);
+            text-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+            line-height: 1;
         }
 
-        #combo-label {
-            font-size: 16px;
-            color: #fff;
-            letter-spacing: 4px;
+        #combo-text {
+            font-size: 14px;
+            letter-spacing: 6px;
             text-transform: uppercase;
+            font-weight: bold;
+            color: #fff;
         }
 
-        /* UPGRADE PANEL - Bottom */
-        #upgrade-panel {
+        /* --- SHOP / BOTTOM PANEL --- */
+        #control-deck {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 150px;
-            background: var(--panel);
-            border-top: 2px solid var(--btn-border);
+            height: 160px;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-top: 1px solid var(--border);
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Better for scroll */
-            gap: 10px;
-            padding: 0 10px;
-            box-sizing: border-box;
+            padding: 0 15px;
+            gap: 15px;
+            overflow-x: auto;
             z-index: 20;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
-            overflow-x: auto; /* Scroll enabled */
-            -webkit-overflow-scrolling: touch;
+            box-sizing: border-box;
+        }
+        
+        /* Hide scrollbar */
+        #control-deck::-webkit-scrollbar { display: none; }
+
+        /* --- INJECT BUTTON (THE STRATEGIC ELEMENT) --- */
+        #inject-btn {
+            width: 110px;
+            height: 110px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            color: var(--accent);
+            flex-shrink: 0;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.1s, filter 0.2s;
+            box-shadow: 0 0 15px var(--accent-glow);
         }
 
-        /* Hide Scrollbar */
-        #upgrade-panel::-webkit-scrollbar { display: none; }
-        #upgrade-panel { -ms-overflow-style: none; scrollbar-width: none; }
+        #inject-btn:active { transform: scale(0.95); }
+        
+        #inject-btn.cooldown {
+            border-color: #333;
+            color: #555;
+            box-shadow: none;
+            pointer-events: none;
+        }
 
-        .upgrade-card {
-            background: var(--btn-bg);
-            border: 1px solid var(--btn-border);
-            border-radius: 8px;
-            padding: 8px;
-            min-width: 110px;
-            width: 120px;
-            text-align: center;
-            cursor: pointer;
-            transition: background 0.1s, transform 0.1s;
+        /* The filling animation for cooldown */
+        #inject-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: var(--accent);
+            opacity: 0.2;
+            transition: height 0.1s linear;
+        }
+
+        .btn-label {
+            position: relative;
+            z-index: 2;
+            font-weight: 800;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-sub {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* --- UPGRADE CARDS --- */
+        .card {
+            width: 100px;
             height: 110px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            flex-shrink: 0;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            touch-action: manipulation;
-            flex-shrink: 0; /* Prevent shrinking */
-        }
-
-        .upgrade-card:hover { background: #30363d; }
-        .upgrade-card:active { transform: translateY(2px); }
-        
-        .upgrade-card.disabled { 
-            opacity: 0.5; 
-            background: #111;
-        }
-
-        .u-title { font-size: 11px; color: #8b949e; text-transform: uppercase; font-weight: bold; }
-        .u-val { font-size: 18px; font-weight: bold; color: white; margin: 5px 0; }
-        .u-cost { font-size: 11px; color: #f2c94c; }
-
-        /* Spawn Button */
-        #spawn-btn {
-            background: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 8px;
-            min-width: 110px;
-            height: 110px;
-            font-weight: bold;
-            font-size: 16px;
+            padding: 10px;
+            box-sizing: border-box;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 242, 96, 0.2);
-            transition: background 0.1s, transform 0.1s;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            flex-shrink: 0;
-            touch-action: manipulation;
+            transition: background 0.2s;
         }
-        #spawn-btn:hover { background: #26ff80; }
-        #spawn-btn:active { transform: scale(0.95); }
 
-        canvas { display: block; }
+        .card:hover { background: rgba(255, 255, 255, 0.08); }
+        .card:active { transform: translateY(2px); }
+
+        .card.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            border-color: transparent;
+        }
+
+        .c-title { font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; }
+        .c-val { font-size: 16px; color: #fff; font-weight: 600; text-align: center; margin: auto 0; }
+        .c-cost { font-size: 11px; color: var(--gold); text-align: right; font-weight: 600; }
+
+        canvas { display: block; position: relative; z-index: 1; }
+        
     </style>
 </head>
 <body>
 
+    <div id="grid"></div>
+
     <div id="hud">
-        <h1>REACTION.IO</h1>
-        <div class="stat-row">CREDITS: <span id="credits">0</span></div>
-        <div class="stat-row">POPULATION: <span id="pop-count">0</span> / <span id="pop-cap">30</span></div>
+        <div class="hud-panel">
+            <div class="currency-label">Credits</div>
+            <div id="credits">0</div>
+        </div>
+        <div class="hud-panel" style="text-align: right;">
+            <div class="currency-label">Entity Count</div>
+            <div style="font-weight: bold;"><span id="pop-count">0</span> / <span id="pop-cap">30</span></div>
+        </div>
     </div>
 
-    <div id="combo-hud">
-        <span id="combo-count">x1</span>
-        <span id="combo-label">FRENZY!</span>
+    <div id="combo-container">
+        <div id="combo-val">x1.0</div>
+        <div id="combo-text">CHAIN REACTION</div>
     </div>
 
-    <div id="upgrade-panel">
-        <button id="spawn-btn" onclick="spawnBatch()">
-            <span>INJECT</span>
+    <div id="control-deck">
+        <button id="inject-btn" onclick="triggerInject()">
+            <div id="inject-fill"></div>
+            <div class="btn-label">INJECT</div>
+            <div class="btn-sub">BATCH SPAWN</div>
         </button>
 
-        <div class="upgrade-card" id="btn-inject" onclick="buyUpgrade('inject')">
-            <div class="u-title">Batch Size</div>
-            <div class="u-val" id="val-inject">5</div>
-            <div class="u-cost" id="cost-inject">400 CR</div>
+        <div class="card" id="card-batch" onclick="buyUpgrade('batch')">
+            <div class="c-title">Batch Size</div>
+            <div class="c-val" id="val-batch">5</div>
+            <div class="c-cost" id="cost-batch">400</div>
         </div>
 
-        <div class="upgrade-card" id="btn-shrapnel" onclick="buyUpgrade('shrapnel')">
-            <div class="u-title">Triangles</div>
-            <div class="u-val" id="val-shrapnel">3</div>
-            <div class="u-cost" id="cost-shrapnel">50 CR</div>
+        <div class="card" id="card-shrapnel" onclick="buyUpgrade('shrapnel')">
+            <div class="c-title">Explosives</div>
+            <div class="c-val" id="val-shrapnel">3</div>
+            <div class="c-cost" id="cost-shrapnel">50</div>
         </div>
 
-        <div class="upgrade-card" id="btn-range" onclick="buyUpgrade('range')">
-            <div class="u-title">Triangle Life</div>
-            <div class="u-val" id="val-range">1.0s</div>
-            <div class="u-cost" id="cost-range">100 CR</div>
+        <div class="card" id="card-luck" onclick="buyUpgrade('luck')">
+            <div class="c-title">Luck</div>
+            <div class="c-val" id="val-luck">1%</div>
+            <div class="c-cost" id="cost-luck">500</div>
         </div>
 
-        <div class="upgrade-card" id="btn-cap" onclick="buyUpgrade('cap')">
-            <div class="u-title">Max Circles</div>
-            <div class="u-val" id="val-cap">30</div>
-            <div class="u-cost" id="cost-cap">200 CR</div>
+        <div class="card" id="card-cap" onclick="buyUpgrade('cap')">
+            <div class="c-title">Capacity</div>
+            <div class="c-val" id="val-cap">30</div>
+            <div class="c-cost" id="cost-cap">150</div>
         </div>
 
-        <div class="upgrade-card" id="btn-auto" onclick="buyUpgrade('auto')">
-            <div class="u-title">Auto Spawn</div>
-            <div class="u-val" id="val-auto">2.0s</div>
-            <div class="u-cost" id="cost-auto">300 CR</div>
+        <div class="card" id="card-auto" onclick="buyUpgrade('auto')">
+            <div class="c-title">Auto Rate</div>
+            <div class="c-val" id="val-auto">2.0s</div>
+            <div class="c-cost" id="cost-auto">300</div>
         </div>
     </div>
 
@@ -216,50 +291,58 @@
 
     <script>
         const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize rendering
         
         let width, height;
 
-        // --- GAME STATE ---
+        // --- GAME LOGIC STATE ---
         let credits = 0;
         let circles = [];
         let particles = [];
         let texts = [];
-        let lastAutoSpawn = 0;
         
+        // Timer States
+        let lastAutoSpawn = 0;
+        let lastFrameTime = 0;
+        
+        // Cooldown State (Strategic Element)
+        let injectCooldown = 0;
+        const INJECT_COOLDOWN_MAX = 60; // Frames
+
         // Combo State
         let combo = 0;
+        let comboMultiplier = 1.0;
         let comboTimer = 0;
-        const COMBO_DECAY_FRAMES = 90;
+        const COMBO_DECAY = 80;
 
-        // --- UPGRADES STATE ---
+        // --- UPGRADES CONFIG ---
         const upgrades = {
-            inject: { val: 5, cost: 400, costMult: 1.001 },
-            shrapnel: { val: 4, cost: 50, costMult: 1.1 },
-            range: { val: 60, cost: 100, costMult: 1.1 }, // Frames
-            cap: { val: 30, cost: 150, costMult: 1.1 },
-            auto: { val: 2000, cost: 300, costMult: 1.001 } // ms
+            batch:    { val: 5,    cost: 400, mult: 1.6, fmt: (v) => v },
+            shrapnel: { val: 4,    cost: 50,  mult: 1.8, fmt: (v) => v.toFixed(0) },
+            luck:     { val: 1,    cost: 500, mult: 2.0, fmt: (v) => v + "%" }, // Chance for Golden
+            cap:      { val: 30,   cost: 150, mult: 1.4, fmt: (v) => v },
+            auto:     { val: 2000, cost: 300, mult: 1.6, fmt: (v) => (v/1000).toFixed(1) + 's' } // ms
         };
 
-        // --- CLASSES ---
+        // --- ENTITY CLASSES ---
 
         class FloatingText {
-            constructor(x, y, text, size=20, color='#fff') {
+            constructor(x, y, text, color, size) {
                 this.x = x;
                 this.y = y;
                 this.text = text;
                 this.color = color;
                 this.size = size;
-                this.life = 50;
-                this.dy = -1.5;
+                this.life = 1.0;
+                this.dy = -2;
             }
             update() {
                 this.y += this.dy;
-                this.life--;
+                this.life -= 0.02;
             }
             draw() {
-                ctx.globalAlpha = Math.max(0, this.life / 50);
-                ctx.font = `bold ${this.size}px monospace`;
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.font = `bold ${this.size}px Arial`;
                 ctx.fillStyle = this.color;
                 ctx.fillText(this.text, this.x, this.y);
                 ctx.globalAlpha = 1;
@@ -267,49 +350,72 @@
         }
 
         class Circle {
-            constructor(x, y) {
+            constructor(x, y, isGolden = false) {
                 this.x = x;
                 this.y = y;
-                this.radius = Math.random() * 15 + 10;
-                this.vx = (Math.random() - 0.5) * 1.5;
-                this.vy = (Math.random() - 0.5) * 1.5;
-                const hue = Math.random() * 60 + 160; 
-                this.color = `hsl(${hue}, 70%, 50%)`;
+                this.radius = isGolden ? 12 : Math.random() * 12 + 8;
+                this.isGolden = isGolden;
+                
+                // Gold circles move fast (Reward for attention)
+                const speedMult = isGolden ? 3.5 : 1.0;
+                this.vx = (Math.random() - 0.5) * 3 * speedMult;
+                this.vy = (Math.random() - 0.5) * 3 * speedMult;
+                
+                this.color = isGolden ? '#ffd700' : `hsl(${Math.random() * 50 + 170}, 80%, 60%)`;
                 this.markedForDeletion = false;
-                this.scale = 0; 
+                this.spawnAnim = 0;
             }
 
             update() {
-                if(this.scale < 1) this.scale += 0.1;
+                if(this.spawnAnim < 1) this.spawnAnim += 0.1;
+                
+                // Physics
                 if (this.x + this.radius > width || this.x - this.radius < 0) this.vx *= -1;
                 if (this.y + this.radius > height || this.y - this.radius < 0) this.vy *= -1;
                 this.x += this.vx;
                 this.y += this.vy;
+                
+                // Hard clamp
                 this.x = Math.max(this.radius, Math.min(width - this.radius, this.x));
                 this.y = Math.max(this.radius, Math.min(height - this.radius, this.y));
             }
 
             draw() {
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
+                const r = this.radius * this.spawnAnim;
+                ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+                
+                if (this.isGolden) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ffd700';
+                } else {
+                    ctx.fillStyle = this.color;
+                    ctx.shadowBlur = 0;
+                }
+                
                 ctx.fill();
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                
+                // Inner highlight
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 2;
                 ctx.stroke();
+                
+                ctx.shadowBlur = 0; // Reset
                 ctx.closePath();
             }
         }
 
         class Particle {
-            constructor(x, y) {
+            constructor(x, y, isGolden) {
                 this.x = x;
                 this.y = y;
-                this.angle = Math.random() * Math.PI * 2;
-                this.speed = 6;
-                this.vx = Math.cos(this.angle) * this.speed;
-                this.vy = Math.sin(this.angle) * this.speed;
-                this.life = upgrades.range.val; 
-                this.maxLife = upgrades.range.val;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = isGolden ? 12 : 6; // Golden shrapnel is faster/deadlier
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 60; // Frames
+                this.isGolden = isGolden;
                 this.markedForDeletion = false;
             }
 
@@ -317,43 +423,35 @@
                 this.x += this.vx;
                 this.y += this.vy;
                 this.life--;
+
+                // Screen Wrap
                 if (this.x < 0) this.x = width;
                 if (this.x > width) this.x = 0;
                 if (this.y < 0) this.y = height;
                 if (this.y > height) this.y = 0;
+
                 if (this.life <= 0) this.markedForDeletion = true;
             }
 
             draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(Math.atan2(this.vy, this.vx));
-                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.globalAlpha = this.life / 60;
+                ctx.fillStyle = this.isGolden ? '#fff' : '#00f3ff';
                 ctx.beginPath();
-                ctx.moveTo(8, 0);
-                ctx.lineTo(-6, 5);
-                ctx.lineTo(-6, -5);
-                ctx.fillStyle = '#f2c94c';
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.restore();
                 ctx.globalAlpha = 1;
             }
         }
 
-        // --- CORE LOGIC ---
+        // --- CORE FUNCTIONS ---
 
         function init() {
             resize();
             window.addEventListener('resize', resize);
             
-            // Mouse/Touch handling
-            canvas.addEventListener('mousedown', handleInput);
-            canvas.addEventListener('touchstart', (e) => {
-                // Prevent default touch behaviors like scrolling on canvas
-                e.preventDefault();
-                handleInput(e.touches[0]);
-            }, {passive: false});
-
+            // Interaction
+            canvas.addEventListener('pointerdown', handleInput);
+            
             updateUI();
             requestAnimationFrame(loop);
         }
@@ -363,177 +461,209 @@
             height = canvas.height = window.innerHeight;
         }
 
-        function spawnCircle() {
+        function spawnCircle(forceGolden = false) {
             if (circles.length >= upgrades.cap.val) return;
-            const x = Math.random() * (width - 60) + 30;
-            const y = Math.random() * (height - 200) + 30;
-            circles.push(new Circle(x, y));
+            
+            // Strategic Spawning: Don't spawn under UI
+            const x = Math.random() * (width - 40) + 20;
+            const y = Math.random() * (height - 250) + 80; 
+            
+            // Luck Mechanic
+            const isGolden = forceGolden || (Math.random() * 100 < upgrades.luck.val);
+            
+            circles.push(new Circle(x, y, isGolden));
         }
 
-        function spawnBatch() {
-            let count = 0;
-            const batchSize = upgrades.inject.val; 
+        function triggerInject() {
+            if(injectCooldown > 0) return; // Cooldown Check
             
-            while(circles.length < upgrades.cap.val && count < batchSize) {
+            let count = 0;
+            while(circles.length < upgrades.cap.val && count < upgrades.batch.val) {
                 spawnCircle();
                 count++;
             }
             
-            const btn = document.getElementById('spawn-btn');
-            if(circles.length >= upgrades.cap.val) {
-                btn.style.background = "#ff4757";
-                setTimeout(() => { btn.style.background = "#00f260"; }, 200);
-            }
+            // Activate Cooldown
+            injectCooldown = INJECT_COOLDOWN_MAX;
+            updateInjectBtn();
         }
 
         function explode(circle) {
             circle.markedForDeletion = true;
             
+            // Combo Logic
             combo++;
-            comboTimer = COMBO_DECAY_FRAMES;
-            updateComboUI();
-
-            let multiplier = 1 + (combo * 0.5);
-            let amount = Math.floor(10 * multiplier);
+            comboTimer = COMBO_DECAY;
             
-            addCredits(amount);
+            // Multiplier Curve: Logarithmic growth helps game balance
+            // x1, x1.5, x2...
+            comboMultiplier = 1 + (Math.log1p(combo) * 0.5);
+            
+            // Score Calculation
+            let baseScore = circle.isGolden ? 250 : 10;
+            let finalScore = Math.floor(baseScore * comboMultiplier);
+            
+            credits += finalScore;
 
-            let textSize = 16;
-            let textColor = '#f2c94c';
-            if(combo > 10) { textSize = 24; textColor = '#ff0055'; }
-            else if(combo > 5) { textSize = 20; textColor = '#ff9f43'; }
+            // Visuals
+            const color = circle.isGolden ? '#ffd700' : '#fff';
+            const size = circle.isGolden ? 30 : (16 + Math.min(10, combo/2));
+            texts.push(new FloatingText(circle.x, circle.y, `+${finalScore}`, color, size));
 
-            texts.push(new FloatingText(circle.x, circle.y, `+${amount}`, textSize, textColor));
-
-            const count = Math.floor(upgrades.shrapnel.val);
+            // Shrapnel
+            const count = Math.floor(upgrades.shrapnel.val) + (circle.isGolden ? 10 : 0);
             for(let i=0; i<count; i++) {
-                particles.push(new Particle(circle.x, circle.y));
+                particles.push(new Particle(circle.x, circle.y, circle.isGolden));
             }
-
-            const shake = Math.min(8, 2 + (combo/5));
-            ctx.translate(Math.random()*shake - (shake/2), Math.random()*shake - (shake/2));
-            setTimeout(() => ctx.setTransform(1,0,0,1,0,0), 50);
-        }
-
-        function updateComboUI() {
-            const hud = document.getElementById('combo-hud');
-            const count = document.getElementById('combo-count');
             
-            if(combo > 1) {
-                // Limit the scale to a maximum of 1.2x to prevent crashing/huge UI
-                const scale = Math.min(1.2, 1 + (combo / 50));
-                
-                hud.style.opacity = 1;
-                hud.style.transform = `translateX(-50%) scale(${scale})`;
-                count.innerText = "x" + combo;
-            } else {
-                hud.style.opacity = 0;
-                hud.style.transform = `translateX(-50%) scale(1)`;
-            }
-        }
-
-        function addCredits(amount) {
-            credits += amount;
             updateUI();
+            updateComboVisuals();
         }
 
         function handleInput(e) {
-            // Ignore if on panel area
-            if(e.clientY > height - 150) return; 
+            if (e.clientY > height - 160) return; // UI Protection
 
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = e.clientX;
+            const y = e.clientY;
 
             circles.forEach(c => {
                 const dist = Math.hypot(x - c.x, y - c.y);
-                if(dist < c.radius) {
+                // Forgive click accuracy slightly
+                if(dist < c.radius + 15) {
                     explode(c);
                 }
             });
         }
 
-        function buyUpgrade(type) {
-            const up = upgrades[type];
-            if(credits >= up.cost) {
+        function buyUpgrade(key) {
+            const up = upgrades[key];
+            if (credits >= up.cost) {
                 credits -= up.cost;
                 
-                if(type === 'inject') up.val += 1;
-                if(type === 'shrapnel') up.val += 1;
-                if(type === 'range') up.val += 20;
-                if(type === 'cap') up.val += 10;
-                if(type === 'auto') up.val = Math.max(100, up.val * 0.9);
+                // Apply logic
+                if (key === 'batch') up.val++;
+                if (key === 'shrapnel') up.val++;
+                if (key === 'luck') up.val++;
+                if (key === 'cap') up.val += 5;
+                if (key === 'auto') up.val = Math.max(200, up.val * 0.9); // 10% faster
 
-                up.cost = Math.floor(up.cost * up.costMult);
+                up.cost = Math.floor(up.cost * up.mult);
                 updateUI();
             }
         }
+
+        // --- VISUAL UPDATES ---
 
         function updateUI() {
             document.getElementById('credits').innerText = credits.toLocaleString();
             document.getElementById('pop-count').innerText = circles.length;
             document.getElementById('pop-cap').innerText = upgrades.cap.val;
-
-            updateCard('inject', "+" + upgrades.inject.val);
-            updateCard('shrapnel', upgrades.shrapnel.val.toFixed(0));
-            updateCard('range', (upgrades.range.val/60).toFixed(1) + 's');
-            updateCard('cap', upgrades.cap.val);
-            updateCard('auto', (upgrades.auto.val/1000).toFixed(1) + 's');
-        }
-
-        function updateCard(id, displayVal) {
-            const up = upgrades[id];
-            document.getElementById(`val-${id}`).innerText = displayVal;
-            document.getElementById(`cost-${id}`).innerText = up.cost.toLocaleString() + " CR";
             
-            const el = document.getElementById(`btn-${id}`);
-            if(credits < up.cost) el.classList.add('disabled');
-            else el.classList.remove('disabled');
+            // Update Cards
+            for (const [key, up] of Object.entries(upgrades)) {
+                document.getElementById(`val-${key}`).innerText = up.fmt(up.val);
+                document.getElementById(`cost-${key}`).innerText = up.cost.toLocaleString();
+                
+                const card = document.getElementById(`card-${key}`);
+                if (credits < up.cost) card.classList.add('disabled');
+                else card.classList.remove('disabled');
+            }
         }
+
+        function updateInjectBtn() {
+            const btn = document.getElementById('inject-btn');
+            const fill = document.getElementById('inject-fill');
+            
+            if (injectCooldown > 0) {
+                btn.classList.add('cooldown');
+                // Inverted height for "filling up" effect
+                const pct = 100 - ((injectCooldown / INJECT_COOLDOWN_MAX) * 100);
+                fill.style.height = `${pct}%`;
+            } else {
+                btn.classList.remove('cooldown');
+                fill.style.height = '0%';
+            }
+        }
+
+        function updateComboVisuals() {
+            const container = document.getElementById('combo-container');
+            const val = document.getElementById('combo-val');
+            
+            if (combo > 1) {
+                container.style.opacity = 1;
+                // Clamp scale to prevent UI breaking
+                let scale = Math.min(1.3, 1 + (combo / 40)); 
+                container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                val.innerText = `x${comboMultiplier.toFixed(1)}`;
+            } else {
+                container.style.opacity = 0;
+                container.style.transform = `translate(-50%, -50%) scale(0.8)`;
+            }
+        }
+
+        // --- GAME LOOP ---
 
         function loop(timestamp) {
-            ctx.fillStyle = 'rgba(11, 12, 21, 0.4)'; 
+            // Delta time handling could go here, but frame-based is fine for simple idle
+            
+            // Clean Background
+            ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, width, height);
 
-            if(combo > 0) {
+            // Cooldown Logic
+            if (injectCooldown > 0) {
+                injectCooldown--;
+                updateInjectBtn();
+            }
+
+            // Combo Decay
+            if (combo > 0) {
                 comboTimer--;
-                if(comboTimer <= 0) {
-                    combo = 0; 
-                    updateComboUI();
+                if (comboTimer <= 0) {
+                    combo = 0;
+                    comboMultiplier = 1;
+                    updateComboVisuals();
                 }
             }
 
+            // Auto Spawn
             if (timestamp - lastAutoSpawn > upgrades.auto.val) {
                 spawnCircle();
                 lastAutoSpawn = timestamp;
-                updateUI(); 
+                updateUI(); // Count update
             }
 
+            // --- ENTITY UPDATES ---
+            
+            // Circles
             circles = circles.filter(c => !c.markedForDeletion);
             circles.forEach(c => { c.update(); c.draw(); });
 
+            // Particles (Collision Logic)
             particles = particles.filter(p => !p.markedForDeletion);
             particles.forEach(p => {
                 p.update();
                 p.draw();
                 
-                circles.forEach(c => {
-                    if(!c.markedForDeletion) {
+                // Collision Detection
+                // Optimization: Loop backwards or check bounding box if laggy (unlikely here)
+                for (let c of circles) {
+                    if (!c.markedForDeletion) {
                         const dx = p.x - c.x;
                         const dy = p.y - c.y;
-                        if(Math.hypot(dx, dy) < c.radius + 5) {
+                        if (Math.hypot(dx, dy) < c.radius + 5) {
                             p.markedForDeletion = true;
                             explode(c);
+                            break; // One particle pops one circle
                         }
                     }
-                });
+                }
             });
 
+            // Texts
             texts = texts.filter(t => t.life > 0);
             texts.forEach(t => { t.update(); t.draw(); });
 
-            // Periodic UI update not needed every frame for credits
-            // But we keep text/canvas updates
             requestAnimationFrame(loop);
         }
 
