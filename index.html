@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Incremental Reaction: Combo Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Incremental Reaction: Stabilized</title>
     <style>
         :root {
             --bg: #0b0c15;
@@ -22,6 +22,8 @@
             font-family: 'Courier New', Courier, monospace;
             color: var(--text);
             user-select: none;
+            -webkit-user-select: none; /* Safari */
+            touch-action: manipulation; /* Disables double-tap to zoom */
         }
 
         /* HUD - Top Left */
@@ -62,6 +64,7 @@
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s, transform 0.1s;
+            will-change: transform; /* Performance optimization */
         }
 
         #combo-count {
@@ -90,14 +93,19 @@
             border-top: 2px solid var(--btn-border);
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Better for scroll */
             gap: 10px;
             padding: 0 10px;
             box-sizing: border-box;
             z-index: 20;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
-            overflow-x: auto; /* Scroll if screen is too narrow */
+            overflow-x: auto; /* Scroll enabled */
+            -webkit-overflow-scrolling: touch;
         }
+
+        /* Hide Scrollbar */
+        #upgrade-panel::-webkit-scrollbar { display: none; }
+        #upgrade-panel { -ms-overflow-style: none; scrollbar-width: none; }
 
         .upgrade-card {
             background: var(--btn-bg);
@@ -108,19 +116,20 @@
             width: 120px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: background 0.1s, transform 0.1s;
             height: 110px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            touch-action: manipulation;
+            flex-shrink: 0; /* Prevent shrinking */
         }
 
-        .upgrade-card:hover { background: #30363d; transform: translateY(-2px); }
-        .upgrade-card:active { transform: translateY(1px); }
+        .upgrade-card:hover { background: #30363d; }
+        .upgrade-card:active { transform: translateY(2px); }
         
         .upgrade-card.disabled { 
             opacity: 0.5; 
-            cursor: not-allowed; 
             background: #111;
         }
 
@@ -140,13 +149,15 @@
             font-size: 16px;
             cursor: pointer;
             box-shadow: 0 0 15px rgba(0, 242, 96, 0.2);
-            transition: all 0.1s;
+            transition: background 0.1s, transform 0.1s;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            flex-shrink: 0;
+            touch-action: manipulation;
         }
-        #spawn-btn:hover { background: #26ff80; transform: scale(1.05); }
+        #spawn-btn:hover { background: #26ff80; }
         #spawn-btn:active { transform: scale(0.95); }
 
         canvas { display: block; }
@@ -219,15 +230,15 @@
         // Combo State
         let combo = 0;
         let comboTimer = 0;
-        const COMBO_DECAY_FRAMES = 90; // How long combo lasts before resetting
+        const COMBO_DECAY_FRAMES = 90;
 
         // --- UPGRADES STATE ---
         const upgrades = {
-            inject: { val: 5, cost: 400, costMult: 1.6, name: "Batch Size" },
-            shrapnel: { val: 4, cost: 50, costMult: 1.8, name: "Triangles" },
-            range: { val: 60, cost: 100, costMult: 1.5, name: "Duration" }, // Frames
-            cap: { val: 30, cost: 150, costMult: 1.4, name: "Capacity" },
-            auto: { val: 2000, cost: 300, costMult: 1.6, name: "Rate (ms)" } // ms
+            inject: { val: 5, cost: 400, costMult: 1.1 },
+            shrapnel: { val: 4, cost: 50, costMult: 1.1 },
+            range: { val: 60, cost: 100, costMult: 1.1 }, // Frames
+            cap: { val: 30, cost: 150, costMult: 1.1 },
+            auto: { val: 2000, cost: 300, costMult: 1.1 } // ms
         };
 
         // --- CLASSES ---
@@ -334,7 +345,15 @@
         function init() {
             resize();
             window.addEventListener('resize', resize);
+            
+            // Mouse/Touch handling
             canvas.addEventListener('mousedown', handleInput);
+            canvas.addEventListener('touchstart', (e) => {
+                // Prevent default touch behaviors like scrolling on canvas
+                e.preventDefault();
+                handleInput(e.touches[0]);
+            }, {passive: false});
+
             updateUI();
             requestAnimationFrame(loop);
         }
@@ -353,7 +372,6 @@
 
         function spawnBatch() {
             let count = 0;
-            // Use the upgrade value for batch size
             const batchSize = upgrades.inject.val; 
             
             while(circles.length < upgrades.cap.val && count < batchSize) {
@@ -371,20 +389,15 @@
         function explode(circle) {
             circle.markedForDeletion = true;
             
-            // --- COMBO LOGIC ---
             combo++;
-            comboTimer = COMBO_DECAY_FRAMES; // Reset decay timer
+            comboTimer = COMBO_DECAY_FRAMES;
             updateComboUI();
 
-            // Calculate Score: Base 10 * Combo Multiplier
-            // Multiplier grows slower than linear to prevent infinite economy instantly, but still strong
-            // Formula: 1 + (Combo * 0.5)
             let multiplier = 1 + (combo * 0.5);
             let amount = Math.floor(10 * multiplier);
             
             addCredits(amount);
 
-            // Text style depends on combo size
             let textSize = 16;
             let textColor = '#f2c94c';
             if(combo > 10) { textSize = 24; textColor = '#ff0055'; }
@@ -392,13 +405,11 @@
 
             texts.push(new FloatingText(circle.x, circle.y, `+${amount}`, textSize, textColor));
 
-            // Create Shrapnel
             const count = Math.floor(upgrades.shrapnel.val);
             for(let i=0; i<count; i++) {
                 particles.push(new Particle(circle.x, circle.y));
             }
 
-            // Screen Shake (Intensity based on Combo)
             const shake = Math.min(8, 2 + (combo/5));
             ctx.translate(Math.random()*shake - (shake/2), Math.random()*shake - (shake/2));
             setTimeout(() => ctx.setTransform(1,0,0,1,0,0), 50);
@@ -409,8 +420,11 @@
             const count = document.getElementById('combo-count');
             
             if(combo > 1) {
+                // Limit the scale to a maximum of 1.2x to prevent crashing/huge UI
+                const scale = Math.min(1.2, 1 + (combo / 50));
+                
                 hud.style.opacity = 1;
-                hud.style.transform = `translateX(-50%) scale(${1 + (combo/50)})`;
+                hud.style.transform = `translateX(-50%) scale(${scale})`;
                 count.innerText = "x" + combo;
             } else {
                 hud.style.opacity = 0;
@@ -424,7 +438,8 @@
         }
 
         function handleInput(e) {
-            if(e.clientY > height - 150) return; // Ignore clicks on panel
+            // Ignore if on panel area
+            if(e.clientY > height - 150) return; 
 
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -480,11 +495,10 @@
             ctx.fillStyle = 'rgba(11, 12, 21, 0.4)'; 
             ctx.fillRect(0, 0, width, height);
 
-            // Combo Decay logic
             if(combo > 0) {
                 comboTimer--;
                 if(comboTimer <= 0) {
-                    combo = 0; // Reset combo if time runs out
+                    combo = 0; 
                     updateComboUI();
                 }
             }
@@ -518,7 +532,8 @@
             texts = texts.filter(t => t.life > 0);
             texts.forEach(t => { t.update(); t.draw(); });
 
-            updateUI();
+            // Periodic UI update not needed every frame for credits
+            // But we keep text/canvas updates
             requestAnimationFrame(loop);
         }
 
