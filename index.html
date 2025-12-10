@@ -317,11 +317,11 @@
 
         // --- UPGRADES CONFIG ---
         const upgrades = {
-            batch:    { val: 5,    cost: 400, mult: 1.6, fmt: (v) => v },
-            shrapnel: { val: 4,    cost: 50,  mult: 1.8, fmt: (v) => v.toFixed(0) },
-            luck:     { val: 1,    cost: 500, mult: 2.0, fmt: (v) => v + "%" }, // Chance for Golden
-            cap:      { val: 30,   cost: 150, mult: 1.4, fmt: (v) => v },
-            auto:     { val: 2000, cost: 300, mult: 1.6, fmt: (v) => (v/1000).toFixed(1) + 's' } // ms
+            batch:    { val: 50,    cost: 40, mult: 1.01, fmt: (v) => v },
+            shrapnel: { val: 4,    cost: 50,  mult: 1.01, fmt: (v) => v.toFixed(0) },
+            luck:     { val: 1,    cost: 500, mult: 1.01, fmt: (v) => v + "%" }, // Chance for Golden
+            cap:      { val: 30,   cost: 150, mult: 1.01, fmt: (v) => v },
+            auto:     { val: 150, cost: 300, mult: 1.01, fmt: (v) => (v/1000).toFixed(1) + 's' } // ms
         };
 
         // --- ENTITY CLASSES ---
